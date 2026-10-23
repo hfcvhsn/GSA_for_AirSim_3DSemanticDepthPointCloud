@@ -107,12 +107,13 @@ class OpenUAVFiveViewCapture:
             )
         return requests
 
-    def capture(self, pause_sim: bool = True) -> List[CameraCapture]:
+    def capture(self, pause_sim: bool = False) -> List[CameraCapture]:
         """Capture one five-view observation and preserve metric depth.
 
-        AirSim recommends pausing physics when image/pose synchronization matters.
-        The default therefore pauses the simulator around image and camera-info
-        queries, then restores normal simulation in ``finally``.
+        The default does not alter simulator pause state, matching TravelUAV's
+        ``getImageResponses`` behavior. Set ``pause_sim=True`` only when this
+        helper owns the simulator state and synchronized camera-info queries are
+        desired.
         """
         if pause_sim:
             self.client.simPause(True)
@@ -214,7 +215,7 @@ def save_capture(captures: Iterable[CameraCapture], output_dir: Path) -> None:
         camera_dir = output_dir / capture.name
         camera_dir.mkdir(parents=True, exist_ok=True)
 
-        # Match AirSim/OpenUAV's raw uncompressed image-array convention.  No
+        # Match AirSim/OpenUAV's raw uncompressed image-array convention. No
         # geometric flip is introduced here, so RGB and depth stay pixel-aligned.
         airsim.write_png(str(camera_dir / "rgb.png"), capture.rgb)
         np.save(camera_dir / "depth_perspective_m.npy", capture.depth_perspective_m)
