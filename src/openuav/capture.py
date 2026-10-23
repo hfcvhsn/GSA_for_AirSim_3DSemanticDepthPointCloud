@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List
 import json
 import math
 
@@ -51,11 +51,7 @@ def _projection_matrix_to_list(proj_mat) -> List[List[float]]:
 
 
 def intrinsics_from_horizontal_fov(width: int, height: int, fov_deg: float) -> np.ndarray:
-    """Build a pinhole intrinsic matrix from AirSim's horizontal field of view.
-
-    AirSim/OpenUAV uses symmetric perspective cameras. Pixel centers are represented
-    with principal point ((W - 1) / 2, (H - 1) / 2).
-    """
+    """Build a pinhole intrinsic matrix from AirSim's horizontal field of view."""
     if width <= 0 or height <= 0:
         raise ValueError("width and height must be positive")
     if not 0.0 < fov_deg < 180.0:
@@ -64,18 +60,18 @@ def intrinsics_from_horizontal_fov(width: int, height: int, fov_deg: float) -> n
     fov_rad = math.radians(float(fov_deg))
     fx = width / (2.0 * math.tan(fov_rad / 2.0))
     fy = fx
-    cx = (width - 1.0) / 2.0
-    cy = (height - 1.0) / 2.0
+    cx = width / 2.0
+    cy = height / 2.0
     return np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
 
 
 class OpenUAVFiveViewCapture:
     """Faithful OpenUAV/TravelUAV five-camera RGB-D capture wrapper.
 
-    The camera names and image requests mirror TravelUAV's
-    AirVLNSimulatorClientTool.getImageResponses(): for each of the five cameras,
-    request one uncompressed Scene image and one floating-point
-    DepthPerspective image in a single simGetImages call.
+    The camera names and request ordering mirror TravelUAV's
+    ``AirVLNSimulatorClientTool.getImageResponses``: for each camera, request an
+    uncompressed Scene image followed by a floating-point DepthPerspective image
+    in one ``simGetImages`` call.
     """
 
     def __init__(
@@ -112,11 +108,11 @@ class OpenUAVFiveViewCapture:
         return requests
 
     def capture(self, pause_sim: bool = True) -> List[CameraCapture]:
-        """Capture one synchronized five-view observation.
+        """Capture one five-view observation and preserve metric depth.
 
-        If ``pause_sim`` is true, physics is paused for the image request and
-        camera-info queries, following AirSim's recommendation when pose/image
-        synchronization matters.
+        AirSim recommends pausing physics when image/pose synchronization matters.
+        The default therefore pauses the simulator around image and camera-info
+        queries, then restores normal simulation in ``finally``.
         """
         if pause_sim:
             self.client.simPause(True)
@@ -173,6 +169,7 @@ class OpenUAVFiveViewCapture:
                     "image_type_rgb": "Scene",
                     "image_type_depth": "DepthPerspective",
                     "depth_unit": "meter",
+                    "world_frame": "NED",
                     "width": int(rgb_resp.width),
                     "height": int(rgb_resp.height),
                     "fov_deg": float(camera_info.fov),
@@ -181,9 +178,13 @@ class OpenUAVFiveViewCapture:
                         "position": _vector3_to_dict(camera_info.pose.position),
                         "orientation_wxyz": _quaternion_to_dict(camera_info.pose.orientation),
                     },
-                    "image_response_pose_world_ned": {
+                    "rgb_response_pose_world_ned": {
                         "position": _vector3_to_dict(rgb_resp.camera_position),
                         "orientation_wxyz": _quaternion_to_dict(rgb_resp.camera_orientation),
+                    },
+                    "depth_response_pose_world_ned": {
+                        "position": _vector3_to_dict(depth_resp.camera_position),
+                        "orientation_wxyz": _quaternion_to_dict(depth_resp.camera_orientation),
                     },
                     "projection_matrix": _projection_matrix_to_list(camera_info.proj_mat),
                     "rgb_timestamp_ns": int(rgb_resp.time_stamp),
@@ -213,8 +214,8 @@ def save_capture(captures: Iterable[CameraCapture], output_dir: Path) -> None:
         camera_dir = output_dir / capture.name
         camera_dir.mkdir(parents=True, exist_ok=True)
 
-        # AirSim documents uncompressed Scene responses as RGB arrays.
-        # airsim.write_png keeps the array untouched and avoids a BGR conversion.
+        # Match AirSim/OpenUAV's raw uncompressed image-array convention.  No
+        # geometric flip is introduced here, so RGB and depth stay pixel-aligned.
         airsim.write_png(str(camera_dir / "rgb.png"), capture.rgb)
         np.save(camera_dir / "depth_perspective_m.npy", capture.depth_perspective_m)
 
