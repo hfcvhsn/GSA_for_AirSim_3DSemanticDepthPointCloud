@@ -28,9 +28,13 @@ def parse_args() -> argparse.Namespace:
         help="Directory for the captured frame",
     )
     parser.add_argument(
-        "--no-pause",
+        "--pause",
         action="store_true",
-        help="Do not pause physics around image and camera-info queries",
+        help=(
+            "Temporarily pause physics during capture. Disabled by default to "
+            "match TravelUAV/OpenUAV getImageResponses(), which does not alter "
+            "the caller's pause state."
+        ),
     )
     return parser.parse_args()
 
@@ -45,7 +49,7 @@ def main() -> None:
         vehicle_name=args.vehicle_name,
         cameras=OPENUAV_CAMERAS,
     )
-    observations = capture.capture(pause_sim=not args.no_pause)
+    observations = capture.capture(pause_sim=args.pause)
     save_capture(observations, args.output)
 
     print(f"Saved {len(observations)} OpenUAV camera views to {args.output}")
