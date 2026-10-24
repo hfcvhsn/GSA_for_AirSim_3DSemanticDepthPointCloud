@@ -24,11 +24,42 @@ Reference implementation:
 
 TravelUAV's training-side helper converts `DepthPerspective` to an 8-bit visualization by clipping to 0–100 m. That is appropriate for its model input but loses metric precision. This project therefore saves the original floating-point depth as `depth_perspective_m.npy`; later PRs will use it for 3D back-projection.
 
-### Install
+## Environment
+
+The recommended Conda environment is named **`rgbd-sem3d`**, reflecting the project's RGB-D semantic 3D point-cloud pipeline while keeping the name short.
+
+The current environment baseline is:
+
+- Python `3.10.22`
+- CUDA `11.8` / PyTorch `cu118`
+- PyTorch `2.0.1+cu118`
+- torchvision `0.15.2+cu118`
+- torchaudio `2.0.2+cu118`
+
+Create and activate the environment:
+
+```bash
+conda create -n rgbd-sem3d python=3.10.22 -y
+conda activate rgbd-sem3d
+```
+
+Install the CUDA 11.8 PyTorch stack explicitly:
+
+```bash
+pip install \
+  torch==2.0.1+cu118 \
+  torchvision==0.15.2+cu118 \
+  torchaudio==2.0.2+cu118 \
+  --index-url https://download.pytorch.org/whl/cu118
+```
+
+Then install the remaining pinned project dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+`requirements.txt` also points pip to the official PyTorch CUDA 11.8 wheel index and pins the same `+cu118` PyTorch versions. The dependency baseline is derived from the reference environment used for this project rather than from an unconstrained latest-version install.
 
 ### Capture one frame
 
