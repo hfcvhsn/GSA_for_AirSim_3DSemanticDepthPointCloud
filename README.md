@@ -1,4 +1,4 @@
-# RAM-_3DSemanticPointCloud
+# Adapting Grounded-Segment-Anything into Generating 3D Semantic-Depth Point Cloud Pipeline 
 
 Research code for exploring Grounded-Segment-Anything-assisted 3D semantic point-cloud generation in OpenUAV environments.
 
