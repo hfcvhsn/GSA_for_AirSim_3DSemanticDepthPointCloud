@@ -8,6 +8,7 @@ import math
 
 import airsim
 import numpy as np
+from PIL import Image
 
 
 OPENUAV_CAMERAS = (
@@ -79,10 +80,17 @@ class OpenUAVFiveViewCapture:
         client: airsim.MultirotorClient,
         vehicle_name: str = "",
         cameras: Iterable[str] = OPENUAV_CAMERAS,
+        raw_color_order: str = "BGR",
+        flip_vertical: bool = False,
     ) -> None:
         self.client = client
         self.vehicle_name = vehicle_name
         self.cameras = tuple(cameras)
+        if raw_color_order not in ("RGB", "BGR"):
+            raise ValueError("raw_color_order must be RGB or BGR")
+        self.raw_color_order = raw_color_order
+        self.flip_vertical = flip_vertical
+        self.frame_metadata = {}
         if not self.cameras:
             raise ValueError("at least one camera is required")
 
@@ -115,7 +123,8 @@ class OpenUAVFiveViewCapture:
         helper owns the simulator state and synchronized camera-info queries are
         desired.
         """
-        if pause_sim:
+        was_paused = bool(self.client.simIsPause())
+        if pause_sim and not was_paused:
             self.client.simPause(True)
 
         try:
@@ -127,6 +136,20 @@ class OpenUAVFiveViewCapture:
                 raise RuntimeError(
                     f"expected {expected} AirSim image responses, got {len(responses)}"
                 )
+
+            body_pose = self.client.simGetVehiclePose(vehicle_name=self.vehicle_name)
+            self.frame_metadata = {
+                "schema_version": 1,
+                "source": "airsim_rpc",
+                "vehicle_name": self.vehicle_name,
+                "vehicle_pose_world_ned": {
+                    "position": _vector3_to_dict(body_pose.position),
+                    "orientation_wxyz": _quaternion_to_dict(body_pose.orientation),
+                },
+                "pose_synchronized_by_pause": bool(pause_sim or was_paused),
+                "depth_quality": "metric_float",
+                "raw_color_order": self.raw_color_order,
+            }
 
             captures: List[CameraCapture] = []
             for index, camera_name in enumerate(self.cameras):
@@ -140,7 +163,11 @@ class OpenUAVFiveViewCapture:
                 if (rgb_resp.width, rgb_resp.height) != (depth_resp.width, depth_resp.height):
                     raise RuntimeError(f"RGB/depth resolution mismatch for {camera_name}")
 
-                rgb = np.frombuffer(rgb_resp.image_data_uint8, dtype=np.uint8)
+                raw_rgb = rgb_resp.image_data_uint8
+                if isinstance(raw_rgb, str):
+                    # Old rpclib servers use MessagePack raw strings for binary.
+                    raw_rgb = raw_rgb.encode("utf-8", errors="surrogateescape")
+                rgb = np.frombuffer(raw_rgb, dtype=np.uint8)
                 expected_rgb_values = rgb_resp.height * rgb_resp.width * 3
                 if rgb.size != expected_rgb_values:
                     raise RuntimeError(
@@ -148,12 +175,19 @@ class OpenUAVFiveViewCapture:
                         f"expected {expected_rgb_values}, got {rgb.size}"
                     )
                 rgb = rgb.reshape(rgb_resp.height, rgb_resp.width, 3)
+                # AirSim RenderRequest.cpp serializes raw Scene bytes B,G,R.
+                # Internal arrays and saved PNGs always use RGB.
+                if self.raw_color_order == "BGR":
+                    rgb = rgb[..., ::-1]
 
                 depth = airsim.list_to_2d_float_array(
                     depth_resp.image_data_float,
                     depth_resp.width,
                     depth_resp.height,
                 ).astype(np.float32, copy=False)
+                if self.flip_vertical:
+                    rgb = rgb[::-1]
+                    depth = depth[::-1]
 
                 camera_info = self.client.simGetCameraInfo(
                     camera_name,
@@ -164,12 +198,19 @@ class OpenUAVFiveViewCapture:
                     rgb_resp.height,
                     float(camera_info.fov),
                 )
+                if self.flip_vertical:
+                    # Preserve projection geometry after a pixel-row reversal.
+                    K = np.array([[1, 0, 0], [0, -1, rgb_resp.height - 1], [0, 0, 1]]) @ K
 
                 metadata = {
                     "camera_name": camera_name,
                     "image_type_rgb": "Scene",
                     "image_type_depth": "DepthPerspective",
                     "depth_unit": "meter",
+                    "depth_semantics": "ray_distance",
+                    "color_order": "RGB",
+                    "flip_vertical": self.flip_vertical,
+                    "camera_axes": "AirSim local FRD; optical rays [1, (u-cx)/fx, (v-cy)/fy]",
                     "world_frame": "NED",
                     "width": int(rgb_resp.width),
                     "height": int(rgb_resp.height),
@@ -201,23 +242,22 @@ class OpenUAVFiveViewCapture:
                 )
             return captures
         finally:
-            if pause_sim:
-                self.client.simPause(False)
+            if pause_sim and not was_paused:
+                self.client.simPause(was_paused)
 
 
-def save_capture(captures: Iterable[CameraCapture], output_dir: Path) -> None:
+def save_capture(captures: Iterable[CameraCapture], output_dir: Path, frame_metadata=None) -> None:
     """Persist one observation without quantizing metric depth."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    frame_metadata = {"cameras": {}}
+    frame_metadata = dict(frame_metadata or {})
+    frame_metadata["cameras"] = {}
     for capture in captures:
         camera_dir = output_dir / capture.name
         camera_dir.mkdir(parents=True, exist_ok=True)
 
-        # Match AirSim/OpenUAV's raw uncompressed image-array convention. No
-        # geometric flip is introduced here, so RGB and depth stay pixel-aligned.
-        airsim.write_png(str(camera_dir / "rgb.png"), capture.rgb)
+        Image.fromarray(np.ascontiguousarray(capture.rgb)).save(camera_dir / "rgb.png")
         np.save(camera_dir / "depth_perspective_m.npy", capture.depth_perspective_m)
 
         with (camera_dir / "camera.json").open("w", encoding="utf-8") as f:

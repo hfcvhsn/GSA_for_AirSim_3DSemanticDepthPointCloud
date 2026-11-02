@@ -1,0 +1,54 @@
+{
+  "paths": {
+    "gsa_source": "third_party/Grounded-Segment-Anything",
+    "dino_checkpoint": "assets/checkpoints/groundingdino_swint_ogc.pth",
+    "sam_checkpoint": "assets/checkpoints/mobile_sam.pt",
+    "bert": "assets/bert-base-uncased",
+    "cuda_home": "assets/cuda-11.8",
+    "dataset_root": "data/TravelUAV",
+    "simulator_root": "data/traveluav_env"
+  },
+  "capture": {
+    "ip": "127.0.0.1",
+    "port": 41451,
+    "vehicle_name": "Drone_1",
+    "raw_color_order": "BGR",
+    "flip_vertical": false
+  },
+  "dataset": {
+    "trajectory": "Carla_Town01/00c9b2a9-eaa8-4b18-86ad-9f402e5cbb51",
+    "frame": "000005",
+    "depth_encoding": "uint8_0_100m",
+    "fov_deg": 90.0
+  },
+  "segmentation": {
+    "sam_model": "mobile_sam_tiny_vit",
+    "classes": [
+      "building",
+      "road",
+      "sidewalk",
+      "tree",
+      "grass",
+      "car",
+      "truck",
+      "person",
+      "pole",
+      "fence",
+      "water"
+    ],
+    "box_threshold": 0.25,
+    "text_threshold": 0.25,
+    "nms_threshold": 0.5
+  },
+  "cloud": {
+    "min_depth": 0.5,
+    "max_depth": 80.0,
+    "stride": 2,
+    "voxel_size": 0.15,
+    "render_max_points": 60000
+  },
+  "ram": {
+    "source": "third_party/recognize-anything",
+    "checkpoint": "assets/checkpoints/ram_swin_large_14m.pth"
+  }
+}

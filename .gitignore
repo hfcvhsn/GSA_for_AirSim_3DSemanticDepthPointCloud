@@ -14,3 +14,13 @@ checkpoints/
 
 .vscode/
 .idea/
+
+assets/
+third_party/
+.cache/
+env/snapshots/
+config/resources.local.json
+config/resource.local.json
+README.local.md
+*.so
+*.egg-info/

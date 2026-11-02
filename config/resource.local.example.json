@@ -1,0 +1,11 @@
+{
+  "paths": {
+    "gsa_source": "",
+    "dino_checkpoint": "",
+    "sam_checkpoint": "",
+    "bert": "",
+    "cuda_home": "",
+    "dataset_root": "",
+    "simulator_root": ""
+  }
+}

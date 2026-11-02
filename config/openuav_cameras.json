@@ -1,0 +1,11 @@
+{
+  "source": "TravelUAV/airsim_plugin/AirVLNSimulatorServerTool.py: Drone_1 cameras",
+  "axes": "body FRD, camera local FRD, quaternion xyzw generated from RPY degrees",
+  "cameras": {
+    "FrontCamera": {"position": [1, 0, 0], "rpy_deg": [0, 0, 0]},
+    "LeftCamera": {"position": [0, -1, 0], "rpy_deg": [0, 0, -90]},
+    "RightCamera": {"position": [0, 1, 0], "rpy_deg": [0, 0, 90]},
+    "RearCamera": {"position": [-1, 0, 0], "rpy_deg": [0, 0, 180]},
+    "DownCamera": {"position": [0, 0, 0], "rpy_deg": [0, -90, 0]}
+  }
+}

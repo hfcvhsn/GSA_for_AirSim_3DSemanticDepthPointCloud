@@ -1,0 +1,7 @@
+name: rgbd-sem3d
+channels:
+  - defaults
+dependencies:
+  - python=3.10.22
+  - pip
+# Then activate rgbd-sem3d and follow the installation commands in README.md.
