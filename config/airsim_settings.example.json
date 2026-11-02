@@ -1,0 +1,24 @@
+{
+  "SettingsVersion": 1.2,
+  "SimMode": "Multirotor",
+  "ApiServerPort": 41451,
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {"ImageType": 0, "Width": 256, "Height": 256, "FOV_Degrees": 90},
+      {"ImageType": 2, "Width": 256, "Height": 256, "FOV_Degrees": 90}
+    ]
+  },
+  "Vehicles": {
+    "Drone_1": {
+      "VehicleType": "SimpleFlight",
+      "AutoCreate": true,
+      "Cameras": {
+        "FrontCamera": {"X": 1, "Y": 0, "Z": 0, "Roll": 0, "Pitch": 0, "Yaw": 0},
+        "LeftCamera": {"X": 0, "Y": -1, "Z": 0, "Roll": 0, "Pitch": 0, "Yaw": -90},
+        "RightCamera": {"X": 0, "Y": 1, "Z": 0, "Roll": 0, "Pitch": 0, "Yaw": 90},
+        "RearCamera": {"X": -1, "Y": 0, "Z": 0, "Roll": 0, "Pitch": 0, "Yaw": 180},
+        "DownCamera": {"X": 0, "Y": 0, "Z": 0, "Roll": 0, "Pitch": -90, "Yaw": 0}
+      }
+    }
+  }
+}

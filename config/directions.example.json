@@ -1,0 +1,6 @@
+[
+  {"name": "front", "yaw_deg": 0, "elevation_deg": 0},
+  {"name": "L30", "yaw_deg": -30, "elevation_deg": 0},
+  {"name": "R30", "yaw_deg": 30, "elevation_deg": 0},
+  {"name": "DOWN", "yaw_deg": 0, "elevation_deg": -90}
+]

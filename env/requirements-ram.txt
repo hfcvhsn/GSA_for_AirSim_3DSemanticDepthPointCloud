@@ -1,0 +1,3 @@
+# Optional front/down full-image RAM tagging. Retain main cu118/timm versions.
+fairscale==0.4.4
+# Use the pinned source checkout in docs/RAM_TAGS.md; no training/CLIP packages needed.
